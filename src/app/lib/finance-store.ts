@@ -16,57 +16,89 @@ export type Budget = {
   limit: number;
 };
 
+export type CurrencyCode = 'EUR' | 'USD' | 'VES' | 'COP' | 'ARS' | 'MXN' | 'BRL';
+
 const DEFAULT_CATEGORIES = [
-  'Alimentación',
-  'Transporte',
-  'Ocio',
-  'Hogar',
-  'Salud',
-  'Educación',
-  'Otros'
+  'Alimentación', 'Transporte', 'Ocio', 'Hogar',
+  'Salud', 'Educación', 'Salario', 'Freelance', 'Inversión', 'Otros'
 ];
 
 const INITIAL_BUDGETS: Budget[] = DEFAULT_CATEGORIES.map(cat => ({
-  category: cat,
-  limit: 500
+  category: cat, limit: 500
 }));
+
+const CURRENCY_DATA: Record<CurrencyCode, { locale: string; symbol: string }> = {
+  EUR: { locale: 'es-ES', symbol: '€' },
+  USD: { locale: 'en-US', symbol: '$' },
+  VES: { locale: 'es-VE', symbol: 'Bs.' },
+  COP: { locale: 'es-CO', symbol: '$' },
+  ARS: { locale: 'es-AR', symbol: '$' },
+  MXN: { locale: 'es-MX', symbol: '$' },
+  BRL: { locale: 'pt-BR', symbol: 'R$' },
+};
 
 export function useFinanceData() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>(INITIAL_BUDGETS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [selectedCurrency, setSelectedCurrencyState] = useState<CurrencyCode>('EUR');
+  const [useDarkMode, setUseDarkModeState] = useState(false);
+  const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('gestorfacil_transactions');
+    const saved = localStorage.getItem('gestorfacil_transactions');
     const savedBudgets = localStorage.getItem('gestorfacil_budgets');
-
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+    const savedCurrency = localStorage.getItem('gestorfacil_currency');
+    const savedDarkMode = localStorage.getItem('gestorfacil_dark_mode');
+    if (saved) setTransactions(JSON.parse(saved));
     if (savedBudgets) setBudgets(JSON.parse(savedBudgets));
+    if (savedCurrency) setSelectedCurrencyState(savedCurrency as CurrencyCode);
+    if (savedDarkMode) setUseDarkModeState(savedDarkMode === 'true');
     setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('gestorfacil_transactions', JSON.stringify(transactions));
-    }
+    if (isLoaded) localStorage.setItem('gestorfacil_transactions', JSON.stringify(transactions));
   }, [transactions, isLoaded]);
 
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('gestorfacil_budgets', JSON.stringify(budgets));
-    }
+    if (isLoaded) localStorage.setItem('gestorfacil_budgets', JSON.stringify(budgets));
   }, [budgets, isLoaded]);
 
+  const setSelectedCurrency = (c: CurrencyCode) => {
+    setSelectedCurrencyState(c);
+    localStorage.setItem('gestorfacil_currency', c);
+  };
+
+  const toggleDarkMode = () => {
+    setUseDarkModeState(prev => {
+      const next = !prev;
+      localStorage.setItem('gestorfacil_dark_mode', String(next));
+      if (next) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+      return next;
+    });
+  };
+
+  const formatCurrency = (val: number) => {
+    const data = CURRENCY_DATA[selectedCurrency];
+    return new Intl.NumberFormat(data.locale, {
+      style: 'currency',
+      currency: selectedCurrency,
+    }).format(val);
+  };
+
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = {
-      ...transaction,
-      id: Math.random().toString(36).substring(2, 9)
-    };
+    const newTransaction = { ...transaction, id: Math.random().toString(36).substring(2, 9) };
     setTransactions(prev => [newTransaction, ...prev]);
   };
 
   const deleteTransaction = (id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  const updateTransaction = (id: string, data: Omit<Transaction, 'id'>) => {
+    setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
   };
 
   const updateBudget = (category: string, limit: number) => {
@@ -94,9 +126,18 @@ export function useFinanceData() {
     budgets,
     addTransaction,
     deleteTransaction,
+    updateTransaction,
     updateBudget,
     getBudgetsWithSpent,
     totals,
-    isLoaded
+    isLoaded,
+    selectedCurrency,
+    setSelectedCurrency,
+    formatCurrency,
+    useDarkMode,
+    toggleDarkMode,
+    editTransaction,
+    setEditTransaction,
+    categories: DEFAULT_CATEGORIES,
   };
 }

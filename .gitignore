@@ -43,3 +43,22 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+# Secrets
+.telegram-creds
+.env
+*.log
+
+# Android
+gestorfacil-android/.gradle/
+gestorfacil-android/app/build/
+gestorfacil-android/build/
+gestorfacil-android/local.properties
+gestorfacil-legacy/.gradle/
+gestorfacil-legacy/app/build/
+gestorfacil-legacy/build/
+gestorfacil-legacy/local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store

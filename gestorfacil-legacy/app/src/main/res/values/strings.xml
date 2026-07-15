@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GestorFácil Legacy</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_transactions">Movimientos</string>
+    <string name="nav_dolar">Dólar</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="add_transaction">Agregar</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="edit">Editar</string>
+    <string name="income">Ingreso</string>
+    <string name="expense">Gasto</string>
+    <string name="refresh">Actualizar</string>
+</resources>
