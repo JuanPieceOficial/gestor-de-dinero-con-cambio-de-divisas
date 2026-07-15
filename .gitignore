@@ -62,3 +62,4 @@ gestorfacil-legacy/local.properties
 .idea/
 *.iml
 .DS_Store
+/docs
