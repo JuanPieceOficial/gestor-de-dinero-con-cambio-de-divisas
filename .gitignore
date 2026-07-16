@@ -62,4 +62,6 @@ gestorfacil-legacy/local.properties
 .idea/
 *.iml
 .DS_Store
-/docs
+
+# Not needed in static export
+/docs/types/
