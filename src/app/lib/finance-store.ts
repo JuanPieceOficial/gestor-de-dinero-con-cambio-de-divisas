@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 
+function getDeviceId(): string {
+  let id = localStorage.getItem('gestorfacil_device_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('gestorfacil_device_id', id);
+  }
+  return id;
+}
+
 export type Transaction = {
   id: string;
   date: string;
@@ -49,7 +58,8 @@ export function useFinanceData() {
   // Load from Supabase + localStorage fallback
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      const deviceId = getDeviceId();
+      const { data } = await supabase.from('transactions').select('*').eq('device_id', deviceId).order('date', { ascending: false });
       if (data && data.length > 0) {
         setTransactions(data.map((r: any) => ({
           id: String(r.id),
@@ -112,6 +122,7 @@ export function useFinanceData() {
       amount: tx.amount,
       category: tx.category,
       type: tx.type,
+      device_id: getDeviceId(),
     }).select().single();
     if (error) {
       const tmpId = `tmp_${Date.now()}`;
@@ -130,7 +141,7 @@ export function useFinanceData() {
 
   const deleteTransaction = (id: string) => {
     const numId = parseInt(id, 10);
-    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).then();
+    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).eq('device_id', getDeviceId()).then();
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
@@ -143,7 +154,7 @@ export function useFinanceData() {
         amount: data.amount,
         category: data.category,
         type: data.type,
-      }).eq('id', numId).then();
+      }).eq('id', numId).eq('device_id', getDeviceId()).then();
     }
     setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
   };
