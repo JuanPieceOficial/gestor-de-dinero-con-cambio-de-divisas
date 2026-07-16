@@ -40,7 +40,7 @@ export default function Home() {
     useDarkMode,
     toggleDarkMode,
     categories,
-  } = useFinanceData();
+  } = useFinanceData(user);
 
   // Apply dark mode class
   useEffect(() => {

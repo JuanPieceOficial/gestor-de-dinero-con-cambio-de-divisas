@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { useAuth } from './auth';
+import type { User } from '@supabase/supabase-js';
 
 export type Transaction = {
   id: string;
@@ -39,8 +39,7 @@ const CURRENCY_DATA: Record<CurrencyCode, { locale: string; symbol: string }> = 
   BRL: { locale: 'pt-BR', symbol: 'R$' },
 };
 
-export function useFinanceData() {
-  const { user } = useAuth();
+export function useFinanceData(user: User | null) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>(INITIAL_BUDGETS);
   const [isLoaded, setIsLoaded] = useState(false);
