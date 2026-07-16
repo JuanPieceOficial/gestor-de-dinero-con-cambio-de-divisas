@@ -1,6 +1,6 @@
-"use client"
+ "use client"
 
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, LogOut } from "lucide-react";
 import type { CurrencyCode } from "@/app/lib/finance-store";
 
 interface MobileSettingsProps {
@@ -8,6 +8,7 @@ interface MobileSettingsProps {
   onCurrencyChange: (c: CurrencyCode) => void;
   useDarkMode: boolean;
   onToggleDarkMode: () => void;
+  onSignOut: () => void;
 }
 
 const CURRENCIES: { code: CurrencyCode; label: string }[] = [
@@ -25,6 +26,7 @@ export function MobileSettings({
   onCurrencyChange,
   useDarkMode,
   onToggleDarkMode,
+  onSignOut,
 }: MobileSettingsProps) {
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -73,6 +75,14 @@ export function MobileSettings({
           </button>
         </div>
       </div>
+
+      <button
+        onClick={onSignOut}
+        className="w-full h-11 rounded-xl bg-destructive/10 text-destructive font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+      >
+        <LogOut className="w-4 h-4" />
+        Cerrar sesión
+      </button>
     </div>
   );
 }

@@ -2,15 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-
-function getDeviceId(): string {
-  let id = localStorage.getItem('gestorfacil_device_id');
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem('gestorfacil_device_id', id);
-  }
-  return id;
-}
+import { useAuth } from './auth';
 
 export type Transaction = {
   id: string;
@@ -48,6 +40,7 @@ const CURRENCY_DATA: Record<CurrencyCode, { locale: string; symbol: string }> = 
 };
 
 export function useFinanceData() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>(INITIAL_BUDGETS);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -57,9 +50,9 @@ export function useFinanceData() {
 
   // Load from Supabase + localStorage fallback
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const deviceId = getDeviceId();
-      const { data } = await supabase.from('transactions').select('*').eq('device_id', deviceId).order('date', { ascending: false });
+      const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false });
       if (data && data.length > 0) {
         setTransactions(data.map((r: any) => ({
           id: String(r.id),
@@ -122,7 +115,7 @@ export function useFinanceData() {
       amount: tx.amount,
       category: tx.category,
       type: tx.type,
-      device_id: getDeviceId(),
+      user_id: user?.id,
     }).select().single();
     if (error) {
       const tmpId = `tmp_${Date.now()}`;
@@ -141,7 +134,7 @@ export function useFinanceData() {
 
   const deleteTransaction = (id: string) => {
     const numId = parseInt(id, 10);
-    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).eq('device_id', getDeviceId()).then();
+    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).eq('user_id', user?.id).then();
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
@@ -154,7 +147,7 @@ export function useFinanceData() {
         amount: data.amount,
         category: data.category,
         type: data.type,
-      }).eq('id', numId).eq('device_id', getDeviceId()).then();
+      }).eq('id', numId).eq('user_id', user?.id).then();
     }
     setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
   };

@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/app/lib/auth";
 import { useFinanceData } from "@/app/lib/finance-store";
 import { MobileHome } from "@/components/finance/MobileHome";
 import { MobileTransactions } from "@/components/finance/MobileTransactions";
 import { MobileDolar } from "@/components/finance/MobileDolar";
 import { MobileSettings } from "@/components/finance/MobileSettings";
 import { TransactionSheet } from "@/components/finance/TransactionSheet";
+import { AuthPage } from "@/components/finance/AuthPage";
 import { Wallet, ReceiptText, DollarSign, Settings, Plus } from "lucide-react";
 
 const TABS = [
@@ -19,6 +21,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export default function Home() {
+  const { user, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTx, setEditTx] = useState<any>(null);
@@ -44,7 +47,8 @@ export default function Home() {
     else document.documentElement.classList.remove("dark");
   }, [useDarkMode]);
 
-  if (!isLoaded) return null;
+  if (authLoading || !isLoaded) return null;
+  if (!user) return <AuthPage />;
 
   const handleAddOrEdit = (data: any) => {
     if (editTx) {
@@ -77,6 +81,7 @@ export default function Home() {
             onCurrencyChange={setSelectedCurrency}
             useDarkMode={useDarkMode}
             onToggleDarkMode={toggleDarkMode}
+            onSignOut={signOut}
           />
         );
     }
