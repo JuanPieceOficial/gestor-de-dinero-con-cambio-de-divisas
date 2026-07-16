@@ -74,7 +74,7 @@ export function useFinanceData() {
       if (savedDarkMode) setUseDarkModeState(savedDarkMode === 'true');
       setIsLoaded(true);
     })();
-  }, []);
+  }, [user]);
 
   // Sync to localStorage
   useEffect(() => {

@@ -9,6 +9,7 @@ import { MobileDolar } from "@/components/finance/MobileDolar";
 import { MobileSettings } from "@/components/finance/MobileSettings";
 import { TransactionSheet } from "@/components/finance/TransactionSheet";
 import { AuthPage } from "@/components/finance/AuthPage";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Wallet, ReceiptText, DollarSign, Settings, Plus } from "lucide-react";
 
 const TABS = [
@@ -88,6 +89,7 @@ export default function Home() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="h-dvh flex flex-col bg-background max-w-lg mx-auto relative overflow-hidden">
       {/* Header */}
       <header className="shrink-0 px-4 pt-5 pb-2">
@@ -154,5 +156,6 @@ export default function Home() {
         editTransaction={editTx}
       />
     </div>
+    </ErrorBoundary>
   );
 }
