@@ -45,27 +45,27 @@ export function MobileDolar() {
 
   const currentRate = rateList[selectedIdx]?.value || 0;
 
-  // Derive the other field when usdText changes and usd was the last focused field
-  useEffect(() => {
-    if (focusedField !== "usd" || !rate) return;
-    const u = parseFloat(usdText);
-    if (!isNaN(u) && currentRate > 0) {
-      setVesText(formatPrice(u * currentRate));
-    } else if (usdText === "") {
-      setVesText("");
+  const convert = useCallback((source: "usd" | "ves", raw: string) => {
+    const val = parseFloat(raw.replace(/[^0-9.,]/g, "").replace(/\./g, "").replace(",", "."));
+    if (isNaN(val) || currentRate <= 0) {
+      if (source === "usd") setVesText("");
+      else setUsdText("");
+      return;
     }
-  }, [usdText, focusedField, currentRate, rate]);
+    if (source === "usd") {
+      setVesText((val * currentRate).toFixed(2));
+    } else {
+      setUsdText((val / currentRate).toFixed(2));
+    }
+  }, [currentRate]);
 
-  // Derive the other field when vesText changes and ves was the last focused field
   useEffect(() => {
-    if (focusedField !== "ves" || !rate) return;
-    const v = parseFloat(vesText);
-    if (!isNaN(v) && currentRate > 0) {
-      setUsdText(formatPrice(v / currentRate));
-    } else if (vesText === "") {
-      setUsdText("");
-    }
-  }, [vesText, focusedField, currentRate, rate]);
+    if (focusedField === "usd") convert("usd", usdText);
+  }, [usdText]);
+
+  useEffect(() => {
+    if (focusedField === "ves") convert("ves", vesText);
+  }, [vesText]);
 
   const fetchRates = useCallback(async () => {
     setLoading(true);
@@ -210,7 +210,8 @@ export function MobileDolar() {
 
           <div className="space-y-3">
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="$ 0.00"
               value={usdText}
               onFocus={() => setFocusedField("usd")}
@@ -218,7 +219,8 @@ export function MobileDolar() {
               className="w-full h-12 px-4 rounded-xl bg-muted border border-border/50 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/30"
             />
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="Bs. 0.00"
               value={vesText}
               onFocus={() => setFocusedField("ves")}

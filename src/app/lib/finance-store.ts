@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
+import { supabase } from './supabase';
 
 export type Transaction = {
   id: string;
@@ -45,18 +46,34 @@ export function useFinanceData() {
   const [useDarkMode, setUseDarkModeState] = useState(false);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
 
+  // Load from Supabase + localStorage fallback
   useEffect(() => {
-    const saved = localStorage.getItem('gestorfacil_transactions');
-    const savedBudgets = localStorage.getItem('gestorfacil_budgets');
-    const savedCurrency = localStorage.getItem('gestorfacil_currency');
-    const savedDarkMode = localStorage.getItem('gestorfacil_dark_mode');
-    if (saved) setTransactions(JSON.parse(saved));
-    if (savedBudgets) setBudgets(JSON.parse(savedBudgets));
-    if (savedCurrency) setSelectedCurrencyState(savedCurrency as CurrencyCode);
-    if (savedDarkMode) setUseDarkModeState(savedDarkMode === 'true');
-    setIsLoaded(true);
+    (async () => {
+      const { data } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      if (data && data.length > 0) {
+        setTransactions(data.map((r: any) => ({
+          id: String(r.id),
+          date: r.date,
+          description: r.description,
+          amount: r.amount,
+          category: r.category,
+          type: r.type as 'income' | 'expense',
+        })));
+      } else {
+        const saved = localStorage.getItem('gestorfacil_transactions');
+        if (saved) setTransactions(JSON.parse(saved));
+      }
+      const savedBudgets = localStorage.getItem('gestorfacil_budgets');
+      const savedCurrency = localStorage.getItem('gestorfacil_currency');
+      const savedDarkMode = localStorage.getItem('gestorfacil_dark_mode');
+      if (savedBudgets) setBudgets(JSON.parse(savedBudgets));
+      if (savedCurrency) setSelectedCurrencyState(savedCurrency as CurrencyCode);
+      if (savedDarkMode) setUseDarkModeState(savedDarkMode === 'true');
+      setIsLoaded(true);
+    })();
   }, []);
 
+  // Sync to localStorage
   useEffect(() => {
     if (isLoaded) localStorage.setItem('gestorfacil_transactions', JSON.stringify(transactions));
   }, [transactions, isLoaded]);
@@ -64,6 +81,23 @@ export function useFinanceData() {
   useEffect(() => {
     if (isLoaded) localStorage.setItem('gestorfacil_budgets', JSON.stringify(budgets));
   }, [budgets, isLoaded]);
+
+  const syncToSupabase = async (txs: Transaction[]) => {
+    try {
+      const { error } = await supabase.from('transactions').upsert(
+        txs.map(t => ({
+          id: Number(t.id),
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          category: t.category,
+          type: t.type,
+        })),
+        { onConflict: 'id' }
+      );
+      if (error) console.warn('Supabase sync error:', error.message);
+    } catch { /* offline */ }
+  };
 
   const setSelectedCurrency = (c: CurrencyCode) => {
     setSelectedCurrencyState(c);
@@ -90,15 +124,27 @@ export function useFinanceData() {
 
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction = { ...transaction, id: Math.random().toString(36).substring(2, 9) };
-    setTransactions(prev => [newTransaction, ...prev]);
+    setTransactions(prev => {
+      const next = [newTransaction, ...prev];
+      syncToSupabase(next);
+      return next;
+    });
   };
 
   const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    setTransactions(prev => {
+      const next = prev.filter(t => t.id !== id);
+      supabase.from('transactions').delete().eq('id', Number(id)).then();
+      return next;
+    });
   };
 
   const updateTransaction = (id: string, data: Omit<Transaction, 'id'>) => {
-    setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
+    setTransactions(prev => {
+      const next = prev.map(t => t.id === id ? { ...data, id } : t);
+      syncToSupabase(next);
+      return next;
+    });
   };
 
   const updateBudget = (category: string, limit: number) => {
