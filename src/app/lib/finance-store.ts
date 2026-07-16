@@ -82,23 +82,6 @@ export function useFinanceData() {
     if (isLoaded) localStorage.setItem('gestorfacil_budgets', JSON.stringify(budgets));
   }, [budgets, isLoaded]);
 
-  const syncToSupabase = async (txs: Transaction[]) => {
-    try {
-      const { error } = await supabase.from('transactions').upsert(
-        txs.map(t => ({
-          id: Number(t.id),
-          date: t.date,
-          description: t.description,
-          amount: t.amount,
-          category: t.category,
-          type: t.type,
-        })),
-        { onConflict: 'id' }
-      );
-      if (error) console.warn('Supabase sync error:', error.message);
-    } catch { /* offline */ }
-  };
-
   const setSelectedCurrency = (c: CurrencyCode) => {
     setSelectedCurrencyState(c);
     localStorage.setItem('gestorfacil_currency', c);
@@ -122,29 +105,47 @@ export function useFinanceData() {
     }).format(val);
   };
 
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = { ...transaction, id: Math.random().toString(36).substring(2, 9) };
-    setTransactions(prev => {
-      const next = [newTransaction, ...prev];
-      syncToSupabase(next);
-      return next;
-    });
+  const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    const { data, error } = await supabase.from('transactions').insert({
+      date: tx.date,
+      description: tx.description,
+      amount: tx.amount,
+      category: tx.category,
+      type: tx.type,
+    }).select().single();
+    if (error) {
+      const tmpId = `tmp_${Date.now()}`;
+      setTransactions(prev => [{ ...tx, id: tmpId } as Transaction, ...prev]);
+    } else if (data) {
+      setTransactions(prev => [{
+        id: String(data.id),
+        date: data.date,
+        description: data.description,
+        amount: data.amount,
+        category: data.category,
+        type: data.type as 'income' | 'expense',
+      }, ...prev]);
+    }
   };
 
   const deleteTransaction = (id: string) => {
-    setTransactions(prev => {
-      const next = prev.filter(t => t.id !== id);
-      supabase.from('transactions').delete().eq('id', Number(id)).then();
-      return next;
-    });
+    const numId = parseInt(id, 10);
+    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).then();
+    setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const updateTransaction = (id: string, data: Omit<Transaction, 'id'>) => {
-    setTransactions(prev => {
-      const next = prev.map(t => t.id === id ? { ...data, id } : t);
-      syncToSupabase(next);
-      return next;
-    });
+    const numId = parseInt(id, 10);
+    if (!isNaN(numId)) {
+      supabase.from('transactions').update({
+        date: data.date,
+        description: data.description,
+        amount: data.amount,
+        category: data.category,
+        type: data.type,
+      }).eq('id', numId).then();
+    }
+    setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
   };
 
   const updateBudget = (category: string, limit: number) => {
