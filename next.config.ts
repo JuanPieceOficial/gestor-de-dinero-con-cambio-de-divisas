@@ -5,7 +5,6 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 
 
 const nextConfig: NextConfig = {
   output: 'export',
-  distDir: 'docs',
   basePath,
   trailingSlash: true,
   typescript: {

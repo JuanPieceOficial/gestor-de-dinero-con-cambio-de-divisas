@@ -65,3 +65,4 @@ gestorfacil-legacy/local.properties
 
 # Not needed in static export
 /docs/types/
+/out
