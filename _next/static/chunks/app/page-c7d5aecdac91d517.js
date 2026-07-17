@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[974],{2751:(e,t,n)=>{Promise.resolve().then(n.bind(n,9547))},9547:(e,t,n)=>{"use strict";n.r(t),n.d(t,{default:()=>l});var s=n(5155);function l(){return(0,s.jsx)("div",{className:"p-10 text-center text-2xl font-bold",children:"Hola mundo"})}}},e=>{e.O(0,[441,255,358],()=>e(e.s=2751)),_N_E=e.O()}]);
