@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +52,7 @@ import com.gestorfacil.app.ui.transactions.TransactionsScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +75,8 @@ fun MainScreen() {
     val authLoading by app.authRepository.loading.collectAsState()
 
     if (authLoading) return
-    if (userId == null) {
+    val currentUserId = userId
+    if (currentUserId == null) {
         LoginScreen(authRepository = app.authRepository)
         return
     }
@@ -82,6 +85,17 @@ fun MainScreen() {
     var showSheet by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var editingTransaction by rememberSaveable { mutableStateOf<TransactionEntity?>(null) }
+    var synced by rememberSaveable { mutableStateOf(false) }
+
+    // Sync from cloud once on login
+    LaunchedEffect(currentUserId) {
+        if (!synced) {
+            withContext(Dispatchers.IO) {
+                app.repository.syncFromCloud(currentUserId)
+            }
+            synced = true
+        }
+    }
 
     val sheetDismiss: () -> Unit = {
         showSheet = false
@@ -196,10 +210,11 @@ fun MainScreen() {
                     label = "tab_content"
                 ) { tab ->
                     when (tab) {
-                        0 -> HomeScreen(repository = app.repository, currency = currency)
+                        0 -> HomeScreen(repository = app.repository, currency = currency, userId = currentUserId)
                         1 -> TransactionsScreen(
                             repository = app.repository,
                             currency = currency,
+                            userId = currentUserId,
                             onEdit = { t -> editingTransaction = t }
                         )
                         2 -> DolarScreen()
@@ -216,9 +231,9 @@ fun MainScreen() {
             onSave = { transaction ->
                 CoroutineScope(Dispatchers.IO).launch {
                     if (editingTransaction != null) {
-                        app.repository.updateTransaction(transaction)
+                        app.repository.updateTransaction(transaction, currentUserId)
                     } else {
-                        app.repository.addTransaction(transaction)
+                        app.repository.addTransaction(transaction, currentUserId)
                     }
                 }
                 sheetDismiss()

@@ -67,9 +67,10 @@ import java.util.Locale
 fun TransactionsScreen(
     repository: FinanceRepository,
     currency: Currency = Currency.EUR,
+    userId: String = "",
     onEdit: ((TransactionEntity) -> Unit)? = null
 ) {
-    val transactions by repository.allTransactions.collectAsState(initial = emptyList())
+    val transactions by repository.allTransactions(userId).collectAsState(initial = emptyList())
     var searchQuery by remember { mutableStateOf("") }
 
     val filtered = remember(transactions, searchQuery) {
@@ -121,7 +122,7 @@ fun TransactionsScreen(
                         currency = currency,
                         onDelete = {
                             CoroutineScope(Dispatchers.IO).launch {
-                                repository.deleteTransaction(t.id)
+                                repository.deleteTransaction(t.id, userId)
                             }
                         },
                         onEdit = { onEdit?.invoke(t) }

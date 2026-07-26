@@ -49,8 +49,8 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 @Composable
-fun AIScreen(repository: FinanceRepository, currency: Currency = Currency.EUR) {
-    val transactions by repository.allTransactions.collectAsState(initial = emptyList())
+fun AIScreen(repository: FinanceRepository, currency: Currency = Currency.EUR, userId: String = "") {
+    val transactions by repository.allTransactions(userId).collectAsState(initial = emptyList())
     val budgets by repository.allBudgets.collectAsState(initial = emptyList())
 
     var loading by remember { mutableStateOf(false) }

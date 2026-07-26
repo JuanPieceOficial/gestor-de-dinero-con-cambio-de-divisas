@@ -49,11 +49,11 @@ import com.gestorfacil.app.ui.theme.Surface
 import kotlin.math.abs
 
 @Composable
-fun HomeScreen(repository: FinanceRepository, currency: Currency = Currency.EUR) {
-    val income by repository.totalIncome.collectAsState(0.0)
-    val expense by repository.totalExpense.collectAsState(0.0)
+fun HomeScreen(repository: FinanceRepository, currency: Currency = Currency.EUR, userId: String = "") {
+    val income by repository.totalIncome(userId).collectAsState(0.0)
+    val expense by repository.totalExpense(userId).collectAsState(0.0)
     val balance = income - expense
-    val allTransactions by repository.allTransactions.collectAsState(initial = emptyList())
+    val allTransactions by repository.allTransactions(userId).collectAsState(initial = emptyList())
 
     val expenseByCategory = remember(allTransactions) {
         allTransactions

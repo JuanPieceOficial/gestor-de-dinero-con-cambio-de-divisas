@@ -1,7 +1,8 @@
 package com.gestorfacil.app.data.auth
 
-import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.gotrue.providers.builtin.Email
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,8 @@ class AuthRepository {
                 _loading.value = false
             }
             SupabaseProvider.auth.sessionStatus.collect { status ->
-                _userId.value = status.currentOrNull()?.user?.id
+                val authenticated = status as? SessionStatus.Authenticated
+                _userId.value = authenticated?.session?.user?.id
             }
         }
     }

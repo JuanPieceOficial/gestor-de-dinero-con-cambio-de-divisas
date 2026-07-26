@@ -11,5 +11,6 @@ data class TransactionEntity(
     val description: String,
     val amount: Double,
     val category: String,
-    val type: String  // "income" or "expense"
+    val type: String,
+    val userId: String = ""
 )
