@@ -73,4 +73,13 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // Supabase
+    implementation("io.github.jan-tennert.supabase:bom:3.1.1")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+
+    // Ktor (required by Supabase)
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-android:3.0.3")
 }

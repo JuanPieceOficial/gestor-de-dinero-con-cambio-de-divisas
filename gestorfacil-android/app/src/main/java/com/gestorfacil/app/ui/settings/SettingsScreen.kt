@@ -20,8 +20,11 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,7 +54,7 @@ import com.gestorfacil.app.ui.theme.Surface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settingsManager: SettingsManager, onBack: () -> Unit) {
+fun SettingsScreen(settingsManager: SettingsManager, onBack: () -> Unit, onSignOut: () -> Unit = {}) {
     val currentCurrency = remember { mutableStateOf(settingsManager.selectedCurrency) }
 
     Scaffold(
@@ -200,17 +203,36 @@ fun SettingsScreen(settingsManager: SettingsManager, onBack: () -> Unit) {
                     )
                     Column {
                         Text(
-                            text = "GestorFácil",
+                            text = "GestorF\u00e1cil",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Versión 1.0 · Tu salud financiera",
+                            text = "Versi\u00f3n 1.0 \u00b7 Tu salud financiera",
                             style = MaterialTheme.typography.bodySmall,
                             color = OnMuted
                         )
                     }
                 }
+            }
+
+            // Logout
+            Button(
+                onClick = onSignOut,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Cerrar sesi\u00f3n", fontWeight = FontWeight.Medium)
             }
 
             Spacer(Modifier.height(32.dp))

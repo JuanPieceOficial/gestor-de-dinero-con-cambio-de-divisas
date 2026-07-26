@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gestorfacil.app.data.database.TransactionEntity
+import com.gestorfacil.app.ui.auth.LoginScreen
 import com.gestorfacil.app.ui.components.TransactionSheetDialog
 import com.gestorfacil.app.ui.dolar.DolarScreen
 import com.gestorfacil.app.ui.home.HomeScreen
@@ -67,6 +69,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val app = LocalContext.current.applicationContext as GestorFacilApp
+    val userId by app.authRepository.userId.collectAsState()
+    val authLoading by app.authRepository.loading.collectAsState()
+
+    if (authLoading) return
+    if (userId == null) {
+        LoginScreen(authRepository = app.authRepository)
+        return
+    }
+
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showSheet by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -84,7 +95,7 @@ fun MainScreen() {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "GestorFácil",
+                            text = "GestorF\u00e1cil",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -93,7 +104,7 @@ fun MainScreen() {
                         IconButton(onClick = { showSettings = true }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = "Configuración"
+                                contentDescription = "Configuraci\u00f3n"
                             )
                         }
                     },
@@ -114,7 +125,7 @@ fun MainScreen() {
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Agregar transacción"
+                        contentDescription = "Agregar transacci\u00f3n"
                     )
                 }
             }
@@ -166,7 +177,12 @@ fun MainScreen() {
             if (settings) {
                 SettingsScreen(
                     settingsManager = app.settingsManager,
-                    onBack = { showSettings = false }
+                    onBack = { showSettings = false },
+                    onSignOut = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            app.authRepository.signOut()
+                        }
+                    }
                 )
             } else {
                 val currency = app.settingsManager.selectedCurrency
