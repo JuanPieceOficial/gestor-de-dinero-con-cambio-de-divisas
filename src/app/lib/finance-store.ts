@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -18,16 +18,34 @@ export type Budget = {
   limit: number;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  icon?: string;
+  color?: string;
+  is_default: boolean;
+  user_id: string;
+};
+
 export type CurrencyCode = 'EUR' | 'USD' | 'VES' | 'COP' | 'ARS' | 'MXN' | 'BRL';
 
-const DEFAULT_CATEGORIES = [
-  'Alimentación', 'Transporte', 'Ocio', 'Hogar',
-  'Salud', 'Educación', 'Salario', 'Freelance', 'Inversión', 'Otros'
+const DEFAULT_CATEGORIES: Omit<Category, 'id' | 'user_id'>[] = [
+  { name: 'Alimentación', type: 'expense', is_default: true },
+  { name: 'Transporte', type: 'expense', is_default: true },
+  { name: 'Ocio', type: 'expense', is_default: true },
+  { name: 'Hogar', type: 'expense', is_default: true },
+  { name: 'Salud', type: 'expense', is_default: true },
+  { name: 'Educación', type: 'expense', is_default: true },
+  { name: 'Salario', type: 'income', is_default: true },
+  { name: 'Freelance', type: 'income', is_default: true },
+  { name: 'Inversión', type: 'income', is_default: true },
+  { name: 'Otros', type: 'expense', is_default: true },
 ];
 
-const INITIAL_BUDGETS: Budget[] = DEFAULT_CATEGORIES.map(cat => ({
-  category: cat, limit: 500
-}));
+const INITIAL_BUDGETS: Budget[] = DEFAULT_CATEGORIES
+  .filter(c => c.type === 'expense')
+  .map(cat => ({ category: cat.name, limit: 500 }));
 
 const CURRENCY_DATA: Record<CurrencyCode, { locale: string; symbol: string }> = {
   EUR: { locale: 'es-ES', symbol: '€' },
@@ -42,18 +60,60 @@ const CURRENCY_DATA: Record<CurrencyCode, { locale: string; symbol: string }> = 
 export function useFinanceData(user: User | null) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>(INITIAL_BUDGETS);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   const [selectedCurrency, setSelectedCurrencyState] = useState<CurrencyCode>('EUR');
   const [useDarkMode, setUseDarkModeState] = useState(false);
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
 
-  // Load from Supabase + localStorage fallback
-  useEffect(() => {
+  // Load categories from Supabase
+  const loadCategories = useCallback(async () => {
     if (!user) return;
-    (async () => {
-      const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false });
+    try {
+      const { data } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('type', { ascending: true })
+        .order('name', { ascending: true });
+
       if (data && data.length > 0) {
-        setTransactions(data.map((r: any) => ({
+        setCategories(data as Category[]);
+      } else {
+        // Seed defaults
+        await seedDefaultCategories(user.id);
+        const { data: seeded } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id);
+        if (seeded) setCategories(seeded as Category[]);
+      }
+    } catch (e) {
+      console.error('Load categories error:', e);
+      // Fallback to defaults
+      setCategories(DEFAULT_CATEGORIES.map((c, i) => ({ ...c, id: `default-${i}`, user_id: user.id })) as Category[]);
+    } finally {
+      setCategoriesLoaded(true);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  // Load transactions + budgets + settings
+  useEffect(() => {
+    if (!user || !categoriesLoaded) return;
+    (async () => {
+      const { data: txData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (txData && txData.length > 0) {
+        setTransactions(txData.map((r: any) => ({
           id: String(r.id),
           date: r.date,
           description: r.description,
@@ -65,6 +125,7 @@ export function useFinanceData(user: User | null) {
         const saved = localStorage.getItem('gestorfacil_transactions');
         if (saved) setTransactions(JSON.parse(saved));
       }
+
       const savedBudgets = localStorage.getItem('gestorfacil_budgets');
       const savedCurrency = localStorage.getItem('gestorfacil_currency');
       const savedDarkMode = localStorage.getItem('gestorfacil_dark_mode');
@@ -73,7 +134,7 @@ export function useFinanceData(user: User | null) {
       if (savedDarkMode) setUseDarkModeState(savedDarkMode === 'true');
       setIsLoaded(true);
     })();
-  }, [user]);
+  }, [user, categoriesLoaded]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -106,6 +167,40 @@ export function useFinanceData(user: User | null) {
       currency: selectedCurrency,
     }).format(val);
   };
+
+  // Category CRUD
+  const addCategory = async (name: string, type: 'income' | 'expense') => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ name, type, user_id: user.id, is_default: false })
+      .select()
+      .single();
+    if (!error && data) {
+      setCategories(prev => [...prev, data as Category]);
+      return data as Category;
+    }
+    throw error;
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (!user) return;
+    const cat = categories.find(c => c.id === id);
+    if (cat?.is_default) throw new Error('No se puede eliminar categoría por defecto');
+    const { error } = await supabase.from('categories').delete().eq('id', id).eq('user_id', user.id);
+    if (!error) setCategories(prev => prev.filter(c => c.id !== id));
+    else throw error;
+  };
+
+  const updateCategory = async (id: string, updates: Partial<Pick<Category, 'name' | 'icon' | 'color'>>) => {
+    if (!user) return;
+    const { error } = await supabase.from('categories').update(updates).eq('id', id).eq('user_id', user.id);
+    if (!error) setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    else throw error;
+  };
+
+  const getCategoriesByType = (type: 'income' | 'expense') =>
+    categories.filter(c => c.type === type).map(c => c.name);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
     const { data, error } = await supabase.from('transactions').insert({
@@ -174,6 +269,7 @@ export function useFinanceData(user: User | null) {
   return {
     transactions,
     budgets,
+    categories,
     addTransaction,
     deleteTransaction,
     updateTransaction,
@@ -188,6 +284,14 @@ export function useFinanceData(user: User | null) {
     toggleDarkMode,
     editTransaction,
     setEditTransaction,
-    categories: DEFAULT_CATEGORIES,
+    addCategory,
+    deleteCategory,
+    updateCategory,
+    getCategoriesByType,
   };
+}
+
+async function seedDefaultCategories(userId: string) {
+  const rows = DEFAULT_CATEGORIES.map(c => ({ ...c, user_id: userId }));
+  await supabase.from('categories').insert(rows);
 }

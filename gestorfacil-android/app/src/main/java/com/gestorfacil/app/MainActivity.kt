@@ -92,6 +92,7 @@ fun MainScreen() {
         if (!synced) {
             withContext(Dispatchers.IO) {
                 app.repository.syncFromCloud(currentUserId)
+                app.repository.syncCategoriesFromCloud(currentUserId)
             }
             synced = true
         }
@@ -191,6 +192,8 @@ fun MainScreen() {
             if (settings) {
                 SettingsScreen(
                     settingsManager = app.settingsManager,
+                    repository = app.repository,
+                    userId = currentUserId,
                     onBack = { showSettings = false },
                     onSignOut = {
                         CoroutineScope(Dispatchers.IO).launch {
