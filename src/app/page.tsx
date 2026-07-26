@@ -83,6 +83,12 @@ export default function Home() {
             useDarkMode={useDarkMode}
             onToggleDarkMode={toggleDarkMode}
             onSignOut={signOut}
+            categories={categories}
+            addCategory={addCategory}
+            deleteCategory={deleteCategory}
+            transactions={transactions}
+            budgets={budgets}
+            formatCurrency={formatCurrency}
           />
         );
     }

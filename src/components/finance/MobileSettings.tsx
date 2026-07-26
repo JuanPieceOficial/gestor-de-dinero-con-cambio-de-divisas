@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react";
-import { Moon, Sun, LogOut, Plus, Trash2, Edit2 } from "lucide-react";
-import type { CurrencyCode } from "@/app/lib/finance-store";
+import { Moon, Sun, LogOut, Plus, Trash2, Download, FileText } from "lucide-react";
+import type { CurrencyCode, Transaction, Budget } from "@/app/lib/finance-store";
 
 interface MobileSettingsProps {
   selectedCurrency: CurrencyCode;
@@ -13,6 +13,9 @@ interface MobileSettingsProps {
   categories: { name: string; type: 'income' | 'expense'; is_default: boolean; id: string }[];
   addCategory: (name: string, type: 'income' | 'expense') => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  transactions: Transaction[];
+  budgets: Budget[];
+  formatCurrency: (val: number) => string;
 }
 
 const CURRENCIES: { code: CurrencyCode; label: string }[] = [
@@ -25,6 +28,43 @@ const CURRENCIES: { code: CurrencyCode; label: string }[] = [
   { code: "BRL", label: "Real Brasileño (R$)" },
 ];
 
+function downloadFile(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function handleExportCSV(transactions: Transaction[], budgets: Budget[], formatCurrency: (val: number) => string) {
+  const headers = ["Fecha", "Descripción", "Monto", "Categoría", "Tipo"];
+  const rows = transactions.map(t => [
+    t.date,
+    t.description,
+    t.type === "income" ? t.amount : -Math.abs(t.amount),
+    t.category,
+    t.type === "income" ? "Ingreso" : "Gasto",
+  ]);
+  const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+  downloadFile(csv, "gestorfacil-transacciones.csv", "text/csv");
+}
+
+function handleExportJSON(transactions: Transaction[], budgets: Budget[], categories: MobileSettingsProps["categories"]) {
+  const data = {
+    exportDate: new Date().toISOString(),
+    version: "1.0",
+    transactions,
+    budgets,
+    categories,
+  };
+  const json = JSON.stringify(data, null, 2);
+  downloadFile(json, "gestorfacil-backup.json", "application/json");
+}
+
 export function MobileSettings({
   selectedCurrency,
   onCurrencyChange,
@@ -34,6 +74,9 @@ export function MobileSettings({
   categories,
   addCategory,
   deleteCategory,
+  transactions,
+  budgets,
+  formatCurrency,
 }: MobileSettingsProps) {
   const [showAddCategory, setShowAddCategory] = useState<{ type: 'income' | 'expense' } | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -198,6 +241,27 @@ export function MobileSettings({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Export */}
+      <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-sm">
+        <p className="text-sm font-semibold text-muted-foreground mb-3">Exportar datos</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleExportCSV(transactions, budgets, formatCurrency)}
+            className="h-11 rounded-xl bg-primary/10 text-primary font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          >
+            <FileText className="w-4 h-4" />
+            CSV
+          </button>
+          <button
+            onClick={() => handleExportJSON(transactions, budgets, categories)}
+            className="h-11 rounded-xl bg-primary/10 text-primary font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          >
+            <Download className="w-4 h-4" />
+            JSON
+          </button>
+        </div>
       </div>
 
       <button
