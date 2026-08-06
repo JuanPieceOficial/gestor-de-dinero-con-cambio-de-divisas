@@ -84,4 +84,10 @@ dependencies {
     // Ktor (required by Supabase)
     implementation("io.ktor:ktor-client-core:3.0.3")
     implementation("io.ktor:ktor-client-android:3.0.3")
+
+    // Wallet integrada: criptografía (BIP-39, BIP-32, secp256k1, keccak) y QR
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+    implementation("com.google.zxing:core:3.5.3")
+
+    testImplementation("junit:junit:4.13.2")
 }

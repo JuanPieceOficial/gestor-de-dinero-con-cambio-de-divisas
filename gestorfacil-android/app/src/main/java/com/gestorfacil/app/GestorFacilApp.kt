@@ -1,6 +1,8 @@
 package com.gestorfacil.app
 
 import android.app.Application
+import com.cryptowallet.app.data.db.WalletDatabase
+import com.cryptowallet.app.data.repository.WalletRepository
 import com.gestorfacil.app.data.auth.AuthRepository
 import com.gestorfacil.app.data.database.AppDatabase
 import com.gestorfacil.app.data.database.BudgetEntity
@@ -17,11 +19,17 @@ class GestorFacilApp : Application() {
     lateinit var settingsManager: SettingsManager
     val authRepository = AuthRepository()
 
+    // Wallet de criptomonedas integrada (paquete com.cryptowallet.app)
+    lateinit var walletDatabase: WalletDatabase
+    lateinit var walletRepository: WalletRepository
+
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getInstance(this)
         repository = FinanceRepository(database)
         settingsManager = SettingsManager(this)
+        walletDatabase = WalletDatabase.getInstance(this)
+        walletRepository = WalletRepository(this, walletDatabase)
         seedDefaultBudgets()
     }
 

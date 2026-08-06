@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,6 +50,7 @@ import com.gestorfacil.app.ui.navigation.Screen
 import com.gestorfacil.app.ui.settings.SettingsScreen
 import com.gestorfacil.app.ui.theme.GestorFacilTheme
 import com.gestorfacil.app.ui.transactions.TransactionsScreen
+import com.gestorfacil.app.ui.wallet.WalletSection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,6 +66,12 @@ class MainActivity : ComponentActivity() {
                 MainScreen()
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Bloquea la wallet integrada al pasar la app a segundo plano
+        (applicationContext as GestorFacilApp).walletRepository.lock()
     }
 }
 
@@ -86,6 +94,7 @@ fun MainScreen() {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var editingTransaction by rememberSaveable { mutableStateOf<TransactionEntity?>(null) }
     var synced by rememberSaveable { mutableStateOf(false) }
+    val stateHolder = rememberSaveableStateHolder()
 
     // Sync from cloud once on login
     LaunchedEffect(currentUserId) {
@@ -131,7 +140,7 @@ fun MainScreen() {
             }
         },
         floatingActionButton = {
-            if (!showSettings && selectedTab != 2) {
+            if (!showSettings && selectedTab != 2 && selectedTab != 3) {
                 FloatingActionButton(
                     onClick = { showSheet = true },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -221,6 +230,7 @@ fun MainScreen() {
                             onEdit = { t -> editingTransaction = t }
                         )
                         2 -> DolarScreen()
+                        3 -> stateHolder.SaveableStateProvider("wallet") { WalletSection() }
                     }
                 }
             }
