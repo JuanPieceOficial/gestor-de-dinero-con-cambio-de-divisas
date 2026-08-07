@@ -1,7 +1,6 @@
 package com.cryptowallet.app.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,8 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
@@ -38,55 +39,64 @@ fun WelcomeScreen(
     onCreate: () -> Unit,
     onRestore: () -> Unit
 ) {
-    Column(
+    // Scrollable y centrado: en pantallas pequeñas los botones de crear/restaurar
+    // siempre quedan accesibles (antes se cortaban fuera de pantalla).
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        contentAlignment = Alignment.Center
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(96.dp)
-                .clip(CircleShape)
-                .background(Green),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                Icons.Default.Security,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "CryptoWallet",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Tu billetera no custodiada de criptomonedas.\nSolo tú controlas tus llaves privadas.",
-            textAlign = TextAlign.Center,
-            fontSize = 15.sp,
-            color = TextSecondary
-        )
-        Spacer(Modifier.height(32.dp))
-        CardBox {
-            Column(Modifier.padding(4.dp)) {
-                FeatureRow("Llaves 100% locales", "El seed se cifra con tu PIN y el Keystore de Android; nunca sale del dispositivo.")
-                Spacer(Modifier.height(14.dp))
-                FeatureRow("Multi-cadena", "Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base y Avalanche con miles de tokens.")
-                Spacer(Modifier.height(14.dp))
-                FeatureRow("Con respaldo BIP-39", "Frases de recuperación estándar de 24 palabras compatibles con cualquier wallet.")
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(Green),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Security,
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = "CryptoWallet",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Tu billetera no custodiada de criptomonedas.\nSolo tú controlas tus llaves privadas.",
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                color = TextSecondary
+            )
+            Spacer(Modifier.height(24.dp))
+            CardBox {
+                Column(Modifier.padding(4.dp)) {
+                    FeatureRow("Llaves 100% locales", "El seed se cifra con tu PIN y el Keystore de Android; nunca sale del dispositivo.")
+                    Spacer(Modifier.height(12.dp))
+                    FeatureRow("Multi-cadena", "Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base y Avalanche con miles de tokens.")
+                    Spacer(Modifier.height(12.dp))
+                    FeatureRow("Con respaldo BIP-39", "Frases de recuperación estándar de 24 palabras compatibles con cualquier wallet.")
+                }
+            }
+            Spacer(Modifier.height(28.dp))
+            PrimaryButton(text = "Crear nueva billetera", onClick = onCreate)
+            Spacer(Modifier.height(12.dp))
+            SecondaryButton(text = "Restaurar billetera existente", onClick = onRestore)
+            Spacer(Modifier.height(8.dp))
         }
-        Spacer(Modifier.height(32.dp))
-        PrimaryButton(text = "Crear nueva billetera", onClick = onCreate)
-        Spacer(Modifier.height(12.dp))
-        SecondaryButton(text = "Restaurar billetera existente", onClick = onRestore)
     }
 }
 
