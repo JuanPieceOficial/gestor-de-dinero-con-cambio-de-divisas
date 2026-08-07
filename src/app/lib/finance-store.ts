@@ -69,7 +69,11 @@ export function useFinanceData(user: User | null) {
 
   // Load categories from Supabase
   const loadCategories = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setCategories(DEFAULT_CATEGORIES.map((c, i) => ({ ...c, id: `default-${i}`, user_id: 'local' })) as Category[]);
+      setCategoriesLoaded(true);
+      return;
+    }
     try {
       const { data } = await supabase
         .from('categories')
@@ -104,7 +108,11 @@ export function useFinanceData(user: User | null) {
 
   // Load transactions + budgets + settings
   useEffect(() => {
-    if (!user || !categoriesLoaded) return;
+    if (!categoriesLoaded) return;
+    if (!user) {
+      setIsLoaded(true);
+      return;
+    }
     (async () => {
       const { data: txData } = await supabase
         .from('transactions')

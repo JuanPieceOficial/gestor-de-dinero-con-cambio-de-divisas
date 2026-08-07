@@ -40,6 +40,9 @@ export default function Home() {
     useDarkMode,
     toggleDarkMode,
     categories,
+    addCategory,
+    deleteCategory,
+    budgets,
   } = useFinanceData(user);
 
   // Apply dark mode class
@@ -84,7 +87,7 @@ export default function Home() {
             onToggleDarkMode={toggleDarkMode}
             onSignOut={signOut}
             categories={categories}
-            addCategory={addCategory}
+            addCategory={async (name, type) => { await addCategory(name, type); }}
             deleteCategory={deleteCategory}
             transactions={transactions}
             budgets={budgets}
@@ -158,7 +161,7 @@ export default function Home() {
         open={sheetOpen}
         onOpenChange={(v) => { setSheetOpen(v); if (!v) setEditTx(null); }}
         onAdd={handleAddOrEdit}
-        categories={categories}
+        categories={categories.map(c => c.name)}
         editTransaction={editTx}
       />
     </div>
