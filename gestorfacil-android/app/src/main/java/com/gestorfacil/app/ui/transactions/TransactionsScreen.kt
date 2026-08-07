@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Delete
@@ -61,6 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -82,6 +85,11 @@ fun TransactionsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // Resumen compacto del registro de movimientos
+        val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
+        val expense = transactions.filter { it.type == "expense" }.sumOf { abs(it.amount) }
+        BalanceSummary(income = income, expense = expense, currency = currency)
+
         // Search bar
         OutlinedTextField(
             value = searchQuery,
@@ -128,6 +136,94 @@ fun TransactionsScreen(
                         onEdit = { onEdit?.invoke(t) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BalanceSummary(
+    income: Double,
+    expense: Double,
+    currency: Currency
+) {
+    val balance = income - expense
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Primary)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Balance del registro",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = currency.format(balance),
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                MiniStat(
+                    modifier = Modifier.weight(1f),
+                    label = "Ingresos",
+                    amount = currency.format(income),
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    tint = Color(0xFF4ADE80)
+                )
+                MiniStat(
+                    modifier = Modifier.weight(1f),
+                    label = "Gastos",
+                    amount = currency.format(expense),
+                    icon = Icons.AutoMirrored.Filled.TrendingDown,
+                    tint = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniStat(
+    modifier: Modifier = Modifier,
+    label: String,
+    amount: String,
+    icon: ImageVector,
+    tint: Color
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.14f))
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = amount,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

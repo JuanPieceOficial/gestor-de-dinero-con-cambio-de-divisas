@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/lib/auth";
 import { useFinanceData } from "@/app/lib/finance-store";
-import { MobileHome } from "@/components/finance/MobileHome";
 import { MobileTransactions } from "@/components/finance/MobileTransactions";
 import { MobileDolar } from "@/components/finance/MobileDolar";
 import { MobileCartera } from "@/components/finance/MobileCartera";
@@ -13,10 +12,12 @@ import { AuthPage } from "@/components/finance/AuthPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Wallet, ReceiptText, DollarSign, Bitcoin, Settings, Plus } from "lucide-react";
 
+// La Cartera (wallet) es la pestaña principal: es el espacio donde se guarda
+// el dinero. Los Movimientos (ingresos/gastos) son un registro aparte, no
+// tocan el saldo guardado.
 const TABS = [
-  { id: "home", label: "Inicio", icon: Wallet },
-  { id: "transactions", label: "Movimientos", icon: ReceiptText },
   { id: "cartera", label: "Cartera", icon: Bitcoin },
+  { id: "transactions", label: "Movimientos", icon: ReceiptText },
   { id: "dolar", label: "Dólar", icon: DollarSign },
   { id: "settings", label: "Ajustes", icon: Settings },
 ] as const;
@@ -25,7 +26,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>("home");
+  const [activeTab, setActiveTab] = useState<TabId>("cartera");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [editTx, setEditTx] = useState<any>(null);
@@ -35,7 +36,6 @@ export default function Home() {
     addTransaction,
     deleteTransaction,
     updateTransaction,
-    totals,
     isLoaded,
     selectedCurrency,
     setSelectedCurrency,
@@ -69,8 +69,8 @@ export default function Home() {
 
   const tabContent = (tab: TabId) => {
     switch (tab) {
-      case "home":
-        return <MobileHome transactions={transactions} totals={totals} formatCurrency={formatCurrency} />;
+      case "cartera":
+        return <MobileCartera formatCurrency={formatCurrency} />;
       case "transactions":
         return (
           <MobileTransactions
@@ -80,8 +80,6 @@ export default function Home() {
             formatCurrency={formatCurrency}
           />
         );
-      case "cartera":
-        return <MobileCartera formatCurrency={formatCurrency} />;
       case "dolar":
         return <MobileDolar />;
       case "settings":
@@ -130,8 +128,8 @@ export default function Home() {
         {tabContent(activeTab)}
       </main>
 
-      {/* FAB - only on home and transactions */}
-      {(activeTab === "home" || activeTab === "transactions") && (
+      {/* FAB - solo en Movimientos (el registro) */}
+      {activeTab === "transactions" && (
         <button
           onClick={() => { setEditTx(null); setSheetOpen(true); }}
           className="absolute right-5 bottom-20 z-20 w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"

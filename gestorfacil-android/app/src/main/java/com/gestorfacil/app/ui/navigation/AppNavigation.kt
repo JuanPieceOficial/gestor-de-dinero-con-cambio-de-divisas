@@ -12,12 +12,13 @@ sealed class Screen(
     val label: String,
     val icon: ImageVector
 ) {
-    data object Home : Screen("home", "Inicio", Icons.Default.AccountBalanceWallet)
+    // La wallet es la pestaña principal: es el espacio donde se guarda el dinero.
+    // Los movimientos (ingresos/gastos) son un registro aparte, no tocan el saldo.
+    data object Wallet : Screen("wallet", "Cartera", Icons.Default.CurrencyBitcoin)
     data object Transactions : Screen("transactions", "Movimientos", Icons.Default.Receipt)
     data object Dolar : Screen("dolar", "Dólar", Icons.Default.AttachMoney)
-    data object Wallet : Screen("wallet", "Cartera", Icons.Default.CurrencyBitcoin)
 
     companion object {
-        val tabs = listOf(Home, Transactions, Dolar, Wallet)
+        val tabs = listOf(Wallet, Transactions, Dolar)
     }
 }

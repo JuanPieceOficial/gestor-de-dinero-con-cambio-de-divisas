@@ -44,7 +44,6 @@ import com.gestorfacil.app.data.database.TransactionEntity
 import com.gestorfacil.app.ui.auth.LoginScreen
 import com.gestorfacil.app.ui.components.TransactionSheetDialog
 import com.gestorfacil.app.ui.dolar.DolarScreen
-import com.gestorfacil.app.ui.home.HomeScreen
 import com.gestorfacil.app.ui.navigation.Screen
 import com.gestorfacil.app.ui.settings.SettingsScreen
 import com.gestorfacil.app.ui.theme.GestorFacilTheme
@@ -144,7 +143,8 @@ fun MainScreen() {
             }
         },
         floatingActionButton = {
-            if (!showSettings && selectedTab != 2 && selectedTab != 3) {
+            // El FAB de movimientos solo aplica en la pestaña Movimientos
+            if (!showSettings && selectedTab == 1) {
                 FloatingActionButton(
                     onClick = { showSheet = true },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -229,7 +229,9 @@ fun MainScreen() {
                     label = "tab_content"
                 ) { tab ->
                     when (tab) {
-                        0 -> HomeScreen(repository = app.repository, currency = currency, userId = currentUserId)
+                        // 0 = Cartera (wallet): el espacio donde se guarda el dinero.
+                        // Los movimientos son un registro aparte, no tocan el saldo.
+                        0 -> stateHolder.SaveableStateProvider("wallet") { WalletSection() }
                         1 -> TransactionsScreen(
                             repository = app.repository,
                             currency = currency,
@@ -237,7 +239,6 @@ fun MainScreen() {
                             onEdit = { t -> editingTransaction = t }
                         )
                         2 -> DolarScreen()
-                        3 -> stateHolder.SaveableStateProvider("wallet") { WalletSection() }
                     }
                 }
             }

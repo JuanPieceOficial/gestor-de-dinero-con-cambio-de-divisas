@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Transaction } from "@/app/lib/finance-store";
-import { Trash2, ShoppingCart, Home, Car, Utensils, HeartPulse, GraduationCap, Briefcase, TrendingUp, CircleEllipsis, Search } from "lucide-react";
+import { Trash2, ShoppingCart, Home, Car, Utensils, HeartPulse, GraduationCap, Briefcase, TrendingUp, CircleEllipsis, Search, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface MobileTransactionsProps {
   transactions: Transaction[];
@@ -27,6 +27,17 @@ const CATEGORY_ICONS: Record<string, any> = {
 export function MobileTransactions({ transactions, onDelete, onEdit, formatCurrency }: MobileTransactionsProps) {
   const [search, setSearch] = useState("");
 
+  // Resumen compacto del registro de movimientos (no toca el saldo guardado)
+  const summary = useMemo(() => {
+    const income = transactions
+      .filter((t) => t.type === "income")
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+    const expense = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+    return { income, expense, balance: income - expense };
+  }, [transactions]);
+
   const filtered = search.trim()
     ? transactions.filter(
         (t) =>
@@ -37,6 +48,30 @@ export function MobileTransactions({ transactions, onDelete, onEdit, formatCurre
 
   return (
     <div className="flex flex-col gap-3 pb-4">
+      {/* Balance del registro */}
+      <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-2xl p-5 shadow-lg shadow-primary/20">
+        <p className="text-sm font-medium opacity-80 uppercase tracking-wider">Balance del registro</p>
+        <p className="text-3xl font-bold mt-1 tracking-tight">
+          {formatCurrency(summary.balance)}
+        </p>
+        <div className="mt-4 flex gap-4">
+          <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3 py-2">
+            <ArrowUpRight className="w-4 h-4 text-accent" />
+            <div>
+              <p className="text-[10px] opacity-70 uppercase tracking-wide">Ingresos</p>
+              <p className="text-sm font-semibold">{formatCurrency(summary.income)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3 py-2">
+            <ArrowDownRight className="w-4 h-4" />
+            <div>
+              <p className="text-[10px] opacity-70 uppercase tracking-wide">Gastos</p>
+              <p className="text-sm font-semibold">{formatCurrency(summary.expense)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Search bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
