@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { useAuth } from "@/app/lib/auth"
-import { Wallet } from "lucide-react"
+import { Wallet, ArrowLeft } from "lucide-react"
 
-export function AuthPage() {
+export function AuthPage({ onClose }: { onClose?: () => void }) {
   const { signIn, signUp, loading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -28,7 +28,16 @@ export function AuthPage() {
   if (loading) return null
 
   return (
-    <div className="h-dvh flex flex-col items-center justify-center px-6 bg-background">
+    <div className="h-dvh flex flex-col items-center justify-center px-6 bg-background relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-6 left-4 p-2 rounded-xl bg-muted flex items-center gap-2 text-sm text-muted-foreground active:scale-95 transition-transform"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver
+        </button>
+      )}
       <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/30 mb-6">
         <Wallet className="w-9 h-9" />
       </div>

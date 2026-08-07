@@ -114,22 +114,29 @@ export function useFinanceData(user: User | null) {
       return;
     }
     (async () => {
-      const { data: txData } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
+      try {
+        const { data: txData } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
 
-      if (txData && txData.length > 0) {
-        setTransactions(txData.map((r: any) => ({
-          id: String(r.id),
-          date: r.date,
-          description: r.description,
-          amount: r.amount,
-          category: r.category,
-          type: r.type as 'income' | 'expense',
-        })));
-      } else {
+        if (txData && txData.length > 0) {
+          setTransactions(txData.map((r: any) => ({
+            id: String(r.id),
+            date: r.date,
+            description: r.description,
+            amount: r.amount,
+            category: r.category,
+            type: r.type as 'income' | 'expense',
+          })));
+        } else {
+          const saved = localStorage.getItem('gestorfacil_transactions');
+          if (saved) setTransactions(JSON.parse(saved));
+        }
+      } catch (e) {
+        // Supabase caído/error de red: seguir con datos locales
+        console.error('Load transactions error:', e);
         const saved = localStorage.getItem('gestorfacil_transactions');
         if (saved) setTransactions(JSON.parse(saved));
       }
@@ -176,9 +183,19 @@ export function useFinanceData(user: User | null) {
     }).format(val);
   };
 
-  // Category CRUD
+  // Category CRUD (funciona también sin login: modo local)
   const addCategory = async (name: string, type: 'income' | 'expense') => {
-    if (!user) return;
+    if (!user) {
+      const local: Category = {
+        id: `local-${Date.now()}`,
+        name,
+        type,
+        is_default: false,
+        user_id: 'local',
+      };
+      setCategories(prev => [...prev, local]);
+      return local;
+    }
     const { data, error } = await supabase
       .from('categories')
       .insert({ name, type, user_id: user.id, is_default: false })
@@ -192,9 +209,12 @@ export function useFinanceData(user: User | null) {
   };
 
   const deleteCategory = async (id: string) => {
-    if (!user) return;
     const cat = categories.find(c => c.id === id);
     if (cat?.is_default) throw new Error('No se puede eliminar categoría por defecto');
+    if (!user) {
+      setCategories(prev => prev.filter(c => c.id !== id));
+      return;
+    }
     const { error } = await supabase.from('categories').delete().eq('id', id).eq('user_id', user.id);
     if (!error) setCategories(prev => prev.filter(c => c.id !== id));
     else throw error;
@@ -211,13 +231,18 @@ export function useFinanceData(user: User | null) {
     categories.filter(c => c.type === type).map(c => c.name);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
+    if (!user) {
+      const tmpId = `tmp_${Date.now()}`;
+      setTransactions(prev => [{ ...tx, id: tmpId } as Transaction, ...prev]);
+      return;
+    }
     const { data, error } = await supabase.from('transactions').insert({
       date: tx.date,
       description: tx.description,
       amount: tx.amount,
       category: tx.category,
       type: tx.type,
-      user_id: user?.id,
+      user_id: user.id,
     }).select().single();
     if (error) {
       const tmpId = `tmp_${Date.now()}`;
@@ -236,20 +261,20 @@ export function useFinanceData(user: User | null) {
 
   const deleteTransaction = (id: string) => {
     const numId = parseInt(id, 10);
-    if (!isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).eq('user_id', user?.id).then();
+    if (user && !isNaN(numId)) supabase.from('transactions').delete().eq('id', numId).eq('user_id', user.id).then();
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const updateTransaction = (id: string, data: Omit<Transaction, 'id'>) => {
     const numId = parseInt(id, 10);
-    if (!isNaN(numId)) {
+    if (user && !isNaN(numId)) {
       supabase.from('transactions').update({
         date: data.date,
         description: data.description,
         amount: data.amount,
         category: data.category,
         type: data.type,
-      }).eq('id', numId).eq('user_id', user?.id).then();
+      }).eq('id', numId).eq('user_id', user.id).then();
     }
     setTransactions(prev => prev.map(t => t.id === id ? { ...data, id } : t));
   };

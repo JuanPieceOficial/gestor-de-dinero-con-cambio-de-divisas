@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react";
-import { Moon, Sun, LogOut, Plus, Trash2, Download, FileText } from "lucide-react";
+import { Moon, Sun, LogOut, LogIn, User, Trash2, Download, FileText } from "lucide-react";
 import type { CurrencyCode, Transaction, Budget } from "@/app/lib/finance-store";
 
 interface MobileSettingsProps {
+  user?: { email?: string } | null;
+  onShowAuth?: () => void;
   selectedCurrency: CurrencyCode;
   onCurrencyChange: (c: CurrencyCode) => void;
   useDarkMode: boolean;
@@ -66,6 +68,8 @@ function handleExportJSON(transactions: Transaction[], budgets: Budget[], catego
 }
 
 export function MobileSettings({
+  user,
+  onShowAuth,
   selectedCurrency,
   onCurrencyChange,
   useDarkMode,
@@ -107,6 +111,49 @@ export function MobileSettings({
 
   return (
     <div className="flex flex-col gap-4 pb-4">
+      {/* Account / Sync */}
+      <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-sm">
+        <p className="text-sm font-semibold text-muted-foreground mb-3">Cuenta y sincronización</p>
+        {user ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{user.email || "Sesión iniciada"}</p>
+                <p className="text-[11px] text-muted-foreground">Datos sincronizados con la nube</p>
+              </div>
+            </div>
+            <button
+              onClick={onSignOut}
+              className="shrink-0 p-2 rounded-xl text-destructive bg-destructive/10 hover:bg-destructive/15 transition-colors"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <p className="text-xs text-muted-foreground">
+                Modo local — tus datos se guardan en este dispositivo
+              </p>
+            </div>
+            {onShowAuth && (
+              <button
+                onClick={onShowAuth}
+                className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              >
+                <LogIn className="w-4 h-4" />
+                Iniciar sesión para sincronizar
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-sm">
         <p className="text-sm font-semibold text-muted-foreground mb-4">Ajustes</p>
 
@@ -264,13 +311,6 @@ export function MobileSettings({
         </div>
       </div>
 
-      <button
-        onClick={onSignOut}
-        className="w-full h-11 rounded-xl bg-destructive/10 text-destructive font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-      >
-        <LogOut className="w-4 h-4" />
-        Cerrar sesión
-      </button>
     </div>
   );
 }

@@ -20,12 +20,20 @@ function notify() {
 
 if (!initialized) {
   initialized = true
+  // Timeout de seguridad: si Supabase no responde, la app igual carga en modo local
+  const safeFinish = () => {
+    if (storeLoading) {
+      storeLoading = false
+      notify()
+    }
+  }
   supabase.auth.getSession().then(({ data: { session } }) => {
     storeUser = session?.user ?? null
   }).catch(() => {}).finally(() => {
     storeLoading = false
     notify()
   })
+  setTimeout(safeFinish, 2500)
   supabase.auth.onAuthStateChange((_event, session) => {
     storeUser = session?.user ?? null
     notify()

@@ -27,6 +27,7 @@ export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [editTx, setEditTx] = useState<any>(null);
 
   const {
@@ -53,8 +54,9 @@ export default function Home() {
     else document.documentElement.classList.remove("dark");
   }, [useDarkMode]);
 
+  // La app funciona sin login (modo local). El login es opcional para
+  // sincronizar con Supabase cuando esté disponible.
   if (authLoading || !isLoaded) return null;
-  if (!user) return <AuthPage />;
 
   const handleAddOrEdit = (data: any) => {
     if (editTx) {
@@ -85,10 +87,12 @@ export default function Home() {
       case "settings":
         return (
           <MobileSettings
+            user={user}
             selectedCurrency={selectedCurrency}
             onCurrencyChange={setSelectedCurrency}
             useDarkMode={useDarkMode}
             onToggleDarkMode={toggleDarkMode}
+            onShowAuth={() => setShowAuth(true)}
             onSignOut={signOut}
             categories={categories}
             addCategory={async (name, type) => { await addCategory(name, type); }}
@@ -159,6 +163,13 @@ export default function Home() {
           })}
         </div>
       </nav>
+
+      {/* Optional Auth overlay */}
+      {showAuth && !user && (
+        <div className="absolute inset-0 z-50">
+          <AuthPage onClose={() => setShowAuth(false)} />
+        </div>
+      )}
 
       {/* Transaction Sheet */}
       <TransactionSheet
