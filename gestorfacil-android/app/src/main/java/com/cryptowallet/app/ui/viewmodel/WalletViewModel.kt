@@ -41,6 +41,9 @@ class WalletViewModel(
     private val _account = MutableStateFlow<AccountInfo?>(null)
     val account: StateFlow<AccountInfo?> = _account.asStateFlow()
 
+    private val _accounts = MutableStateFlow<List<AccountInfo>>(emptyList())
+    val accounts: StateFlow<List<AccountInfo>> = _accounts.asStateFlow()
+
     private val _history = MutableStateFlow<List<TxRecordEntity>>(emptyList())
     val history: StateFlow<List<TxRecordEntity>> = _history.asStateFlow()
 
@@ -52,6 +55,12 @@ class WalletViewModel(
 
     private val _fiatCurrency = MutableStateFlow("USD")
     val fiatCurrency: StateFlow<String> = _fiatCurrency.asStateFlow()
+
+    private val _biometricEnabled = MutableStateFlow(false)
+    val biometricEnabled: StateFlow<Boolean> = _biometricEnabled.asStateFlow()
+
+    private val _historyLoading = MutableStateFlow(false)
+    val historyLoading: StateFlow<Boolean> = _historyLoading.asStateFlow()
 
     val chains: List<Chain> get() = Chains.all
 
@@ -67,6 +76,7 @@ class WalletViewModel(
     fun loadAccount() {
         viewModelScope.launch {
             _account.value = repository.getActiveAccount()
+            _accounts.value = repository.getAccounts()
         }
     }
 
@@ -74,6 +84,96 @@ class WalletViewModel(
         viewModelScope.launch {
             _testnetEnabled.value = repository.isTestnetEnabled()
             _fiatCurrency.value = repository.getFiatCurrency()
+            _biometricEnabled.value = repository.isBiometricEnabled()
+        }
+    }
+
+    fun addAccount(onDone: (AccountInfo?) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val acc = repository.addAccount()
+                _account.value = acc
+                _accounts.value = repository.getAccounts()
+                refresh()
+                onDone(acc)
+            } catch (e: Exception) {
+                _actionMessage.value = e.message ?: "Error al crear la cuenta"
+                onDone(null)
+            }
+        }
+    }
+
+    fun switchAccount(index: Int) {
+        viewModelScope.launch {
+            try {
+                val acc = repository.switchAccount(index)
+                _account.value = acc
+                _accounts.value = repository.getAccounts()
+                refresh()
+            } catch (e: Exception) {
+                _actionMessage.value = e.message ?: "Error al cambiar de cuenta"
+            }
+        }
+    }
+
+    fun renameAccount(index: Int, name: String) {
+        viewModelScope.launch {
+            repository.renameAccount(index, name)
+            _accounts.value = repository.getAccounts()
+            _account.value = repository.getActiveAccount()
+        }
+    }
+
+    fun isBiometricAvailable(): Boolean = repository.isBiometricAvailable()
+
+    fun enableBiometric(
+        onCipherReady: (javax.crypto.Cipher?) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                if (!repository.isBiometricEnabled()) {
+                    _biometricEnabled.value = false
+                }
+                onCipherReady(repository.createBiometricEncryptCipher())
+            } catch (e: Exception) {
+                _actionMessage.value = e.message ?: "Biometría no disponible"
+                onCipherReady(null)
+            }
+        }
+    }
+
+    fun completeEnableBiometric(cipher: javax.crypto.Cipher, onDone: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val ok = repository.enableBiometricUnlock(cipher)
+            if (ok) _biometricEnabled.value = true
+            onDone(ok)
+        }
+    }
+
+    fun disableBiometric() {
+        viewModelScope.launch {
+            repository.disableBiometricUnlock()
+            _biometricEnabled.value = false
+        }
+    }
+
+    fun loadHistory() {
+        viewModelScope.launch {
+            _historyLoading.value = true
+            try {
+                repository.refreshPendingTx()
+                val local = repository.getTxHistory()
+                val onChain = repository.getOnChainHistory()
+                val merged = (local + onChain)
+                    .distinctBy { it.id }
+                    .sortedByDescending { it.timestamp }
+                _history.value = merged
+            } catch (e: Exception) {
+                // silencioso: el historial es secundario
+                _history.value = repository.getTxHistory()
+            } finally {
+                _historyLoading.value = false
+            }
         }
     }
 
@@ -122,17 +222,6 @@ class WalletViewModel(
                     refreshing = false,
                     error = e.message ?: "Error de red"
                 )
-            }
-        }
-    }
-
-    fun loadHistory() {
-        viewModelScope.launch {
-            try {
-                repository.refreshPendingTx()
-                _history.value = repository.getTxHistory()
-            } catch (e: Exception) {
-                // silencioso: el historial es secundario
             }
         }
     }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,7 +49,9 @@ fun LockScreen(
     verifyPin: suspend (String) -> Boolean,
     lockoutRemaining: suspend () -> Long,
     onUnlocked: () -> Unit,
-    onDeleteWallet: () -> Unit
+    onDeleteWallet: () -> Unit,
+    biometricAvailable: Boolean = false,
+    onBiometricUnlock: () -> Unit = {}
 ) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -122,6 +126,35 @@ fun LockScreen(
             onClick = { submit() },
             enabled = pin.length >= 4
         )
+        if (biometricAvailable) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = NavyCard,
+                onClick = onBiometricUnlock
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Fingerprint,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "Usar huella",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(20.dp))
         Surface(
             modifier = Modifier.fillMaxWidth(),

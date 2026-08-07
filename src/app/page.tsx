@@ -6,15 +6,17 @@ import { useFinanceData } from "@/app/lib/finance-store";
 import { MobileHome } from "@/components/finance/MobileHome";
 import { MobileTransactions } from "@/components/finance/MobileTransactions";
 import { MobileDolar } from "@/components/finance/MobileDolar";
+import { MobileCartera } from "@/components/finance/MobileCartera";
 import { MobileSettings } from "@/components/finance/MobileSettings";
 import { TransactionSheet } from "@/components/finance/TransactionSheet";
 import { AuthPage } from "@/components/finance/AuthPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Wallet, ReceiptText, DollarSign, Settings, Plus } from "lucide-react";
+import { Wallet, ReceiptText, DollarSign, Bitcoin, Settings, Plus } from "lucide-react";
 
 const TABS = [
   { id: "home", label: "Inicio", icon: Wallet },
   { id: "transactions", label: "Movimientos", icon: ReceiptText },
+  { id: "cartera", label: "Cartera", icon: Bitcoin },
   { id: "dolar", label: "Dólar", icon: DollarSign },
   { id: "settings", label: "Ajustes", icon: Settings },
 ] as const;
@@ -76,6 +78,8 @@ export default function Home() {
             formatCurrency={formatCurrency}
           />
         );
+      case "cartera":
+        return <MobileCartera formatCurrency={formatCurrency} />;
       case "dolar":
         return <MobileDolar />;
       case "settings":

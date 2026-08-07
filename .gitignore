@@ -66,3 +66,6 @@ gestorfacil-legacy/local.properties
 # Not needed in static export
 /docs/types/
 /out
+
+# APKs locales (no se suben)
+*.apk

@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.gestorfacil.app.GestorFacilApp
+import com.cryptowallet.app.ui.components.showBiometricPrompt
 import com.cryptowallet.app.ui.screens.AddTokenScreen
 import com.cryptowallet.app.ui.screens.BackupPhraseScreen
 import com.cryptowallet.app.ui.screens.ChangePinScreen
@@ -107,6 +108,38 @@ fun AppNavigation(
         }
         composable(Routes.LOCK) {
             val scope = rememberCoroutineScope()
+            val context = LocalContext.current
+            var biometricEnabled by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                biometricEnabled = app.walletRepository.isBiometricAvailable() && app.walletRepository.isBiometricEnabled()
+            }
+            fun unlockWithBiometric() {
+                scope.launch {
+                    val cipher = app.walletRepository.createBiometricDecryptCipher()
+                    val activity = context as? androidx.fragment.app.FragmentActivity
+                    if (activity == null || cipher == null) {
+                        Toast.makeText(context, "Biometría no disponible", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    showBiometricPrompt(
+                        activity = activity,
+                        title = "Desbloquear billetera",
+                        subtitle = "Usa tu huella para continuar",
+                        cipher = cipher,
+                        onSuccess = {
+                            scope.launch {
+                                if (app.walletRepository.unlockWithBiometric(cipher)) {
+                                    navController.navigate(Routes.MAIN) {
+                                        popUpTo(Routes.LOCK) { inclusive = true }
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No se pudo desbloquear", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                }
+            }
             LockScreen(
                 verifyPin = verifyPin,
                 lockoutRemaining = { app.walletRepository.lockoutRemainingMs() },
@@ -122,7 +155,9 @@ fun AppNavigation(
                             popUpTo(Routes.LOCK) { inclusive = true }
                         }
                     }
-                }
+                },
+                biometricAvailable = biometricEnabled,
+                onBiometricUnlock = { unlockWithBiometric() }
             )
         }
         composable(Routes.MAIN) {

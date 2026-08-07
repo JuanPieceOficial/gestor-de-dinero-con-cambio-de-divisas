@@ -1,8 +1,10 @@
 package com.cryptowallet.app.data.repository
 
 import android.content.Context
+import androidx.biometric.BiometricManager
 import com.cryptowallet.app.data.api.BlockchainService
 import com.cryptowallet.app.data.api.Chains
+import com.cryptowallet.app.data.api.ExplorerClient
 import com.cryptowallet.app.data.api.PriceClient
 import com.cryptowallet.app.data.crypto.AesGcm
 import com.cryptowallet.app.data.crypto.Bip39
@@ -33,7 +35,8 @@ class WalletRepository(
     private val database: WalletDatabase,
     private val keystore: KeyStoreManager = KeyStoreManager(),
     private val blockchain: BlockchainService = BlockchainService(),
-    private val prices: PriceClient = PriceClient()
+    private val prices: PriceClient = PriceClient(),
+    private val explorer: ExplorerClient = ExplorerClient()
 ) {
 
     companion object {
@@ -47,6 +50,7 @@ class WalletRepository(
         private const val KEY_LOCKOUT_UNTIL = "lockout_until"
         private const val KEY_TESTNET = "testnet_enabled"
         private const val KEY_FIAT_CURRENCY = "fiat_currency"
+        private const val KEY_BIOMETRIC_MNEMONIC = "biometric_mnemonic"
 
         private const val MAX_PIN_FAILURES = 5
         private const val BASE_LOCKOUT_MS = 30_000L
@@ -102,6 +106,15 @@ class WalletRepository(
         val account = getActiveAccount()
         unlockedPrivateKey = privateKeyFromMnemonic(mnemonic, account.index)
         return true
+    }
+
+    /**
+     * Desbloqueo con la cuenta activa guardada (tras unlock o biometría).
+     */
+    private suspend fun unlockActiveAccount() {
+        val mnemonic = unlockedMnemonic ?: return
+        val account = getActiveAccount()
+        unlockedPrivateKey = privateKeyFromMnemonic(mnemonic, account.index)
     }
 
     /**
@@ -167,6 +180,7 @@ class WalletRepository(
         database.accountDao().deleteAll()
         database.tokenDao().deleteAll()
         database.txDao().deleteAll()
+        keystore.deleteBiometricKey()
     }
 
     // ---------- Bloqueo por PIN ----------
@@ -192,6 +206,76 @@ class WalletRepository(
         database.settingsDao().remove(KEY_LOCKOUT_UNTIL)
     }
 
+    // ---------- Biometría ----------
+
+    fun isBiometricAvailable(): Boolean {
+        val manager = BiometricManager.from(context)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.BIOMETRIC_WEAK
+        return manager.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    suspend fun isBiometricEnabled(): Boolean =
+        database.settingsDao().get(KEY_BIOMETRIC_MNEMONIC) != null
+
+    /**
+     * Crea un cipher en modo cifrado con la clave biométrica. Debe pasarse como
+     * CryptoObject al BiometricPrompt; al autenticarse, se usa en
+     * [enableBiometricUnlock].
+     */
+    fun createBiometricEncryptCipher(): javax.crypto.Cipher =
+        keystore.createBiometricEncryptCipher()
+
+    /**
+     * Tras la autenticación biométrica, cifra el mnemonic desbloqueado con el
+     * cipher autenticado y lo guarda para desbloqueos futuros.
+     */
+    suspend fun enableBiometricUnlock(cipher: javax.crypto.Cipher): Boolean {
+        val mnemonic = unlockedMnemonic ?: return false
+        if (!Bip39.validateMnemonic(context, mnemonic)) return false
+        val encrypted = keystore.encryptWithCipher(cipher, mnemonic)
+        database.settingsDao().put(SettingEntity(KEY_BIOMETRIC_MNEMONIC, encrypted))
+        return true
+    }
+
+    suspend fun disableBiometricUnlock() {
+        database.settingsDao().remove(KEY_BIOMETRIC_MNEMONIC)
+        keystore.deleteBiometricKey()
+    }
+
+    /**
+     * Crea un cipher en modo descifrado con el IV del blob biométrico guardado.
+     * Devuelve null si la biometría no está activa o el IV no es válido.
+     */
+    suspend fun createBiometricDecryptCipher(): javax.crypto.Cipher? {
+        val encrypted = database.settingsDao().get(KEY_BIOMETRIC_MNEMONIC) ?: return null
+        val parts = encrypted.split(":")
+        if (parts.size != 2) return null
+        val iv = android.util.Base64.decode(parts[0], android.util.Base64.NO_WRAP)
+        return try {
+            keystore.createBiometricDecryptCipher(iv)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Tras la autenticación biométrica, descifra el mnemonic y desbloquea.
+     */
+    suspend fun unlockWithBiometric(cipher: javax.crypto.Cipher): Boolean {
+        val encrypted = database.settingsDao().get(KEY_BIOMETRIC_MNEMONIC) ?: return false
+        val mnemonic = try {
+            keystore.decryptWithCipher(cipher, encrypted)
+        } catch (e: Exception) {
+            return false
+        }
+        if (!Bip39.validateMnemonic(context, mnemonic)) return false
+        unlockedMnemonic = mnemonic
+        val account = getActiveAccount()
+        unlockedPrivateKey = privateKeyFromMnemonic(mnemonic, account.index)
+        return true
+    }
+
     // ---------- Preferencias ----------
 
     suspend fun isTestnetEnabled(): Boolean = database.settingsDao().get(KEY_TESTNET) == "1"
@@ -212,6 +296,53 @@ class WalletRepository(
         database.settingsDao().put(SettingEntity(KEY_FIAT_CURRENCY, code))
     }
 
+    // ---------- Multi-cuenta ----------
+
+    suspend fun getAccounts(): List<AccountInfo> {
+        return database.accountDao().getAllSync().map {
+            AccountInfo(it.index, it.address, it.name)
+        }
+    }
+
+    suspend fun addAccount(): AccountInfo {
+        val mnemonic = unlockedMnemonic ?: error("Billetera bloqueada")
+        val accounts = getAccounts()
+        val nextIndex = (accounts.maxOfOrNull { it.index } ?: -1) + 1
+        val account = deriveAccount(mnemonic, nextIndex)
+        database.accountDao().upsert(
+            com.cryptowallet.app.data.db.AccountEntity(
+                id = nextIndex, index = nextIndex, address = account.address, name = "Cuenta ${nextIndex + 1}"
+            )
+        )
+        setActiveAccountIndex(nextIndex)
+        unlockedPrivateKey = privateKeyFromMnemonic(mnemonic, nextIndex)
+        return account
+    }
+
+    suspend fun switchAccount(index: Int): AccountInfo {
+        val account = database.accountDao().getById(index)
+            ?: error("Cuenta no encontrada")
+        setActiveAccountIndex(index)
+        val mnemonic = unlockedMnemonic
+        if (mnemonic != null) {
+            unlockedPrivateKey = privateKeyFromMnemonic(mnemonic, index)
+        }
+        return AccountInfo(account.index, account.address, account.name)
+    }
+
+    suspend fun renameAccount(index: Int, name: String) {
+        val current = database.accountDao().getById(index) ?: return
+        database.accountDao().upsert(
+            com.cryptowallet.app.data.db.AccountEntity(
+                id = current.id, index = current.index, address = current.address, name = name.trim().ifBlank { current.name }
+            )
+        )
+    }
+
+    private suspend fun setActiveAccountIndex(index: Int) {
+        database.settingsDao().put(SettingEntity(KEY_ACTIVE_ACCOUNT, index.toString()))
+    }
+
     // ---------- Cuentas y tokens ----------
 
     suspend fun getActiveAccount(): AccountInfo {
@@ -228,7 +359,7 @@ class WalletRepository(
         val account = getActiveAccount()
         if (account.address.isNotEmpty()) return account.address
         val mnemonic = unlockedMnemonic ?: error("Billetera bloqueada")
-        val acc = deriveAccount(mnemonic, 0)
+        val acc = deriveAccount(mnemonic, account.index)
         return acc.address
     }
 
@@ -434,6 +565,24 @@ class WalletRepository(
     }
 
     suspend fun getTxHistory(): List<TxRecordEntity> = database.txDao().getAllSync()
+
+    /**
+     * Historial on-chain (nativos + tokens ERC-20) de la cuenta activa,
+     * consultando Blockscout para cada cadena activa.
+     */
+    suspend fun getOnChainHistory(): List<TxRecordEntity> {
+        val address = getActiveAddress()
+        val chains = if (isTestnetEnabled()) Chains.testnets else Chains.all
+        val all = mutableListOf<TxRecordEntity>()
+        for (chain in chains) {
+            try {
+                all += explorer.fetchHistory(chain, address)
+            } catch (e: Exception) {
+                // cadena sin explorador: seguir con las demás
+            }
+        }
+        return all
+    }
 
     fun privateKeyForActiveAccountOrNull(): BigInteger? = unlockedPrivateKey
 

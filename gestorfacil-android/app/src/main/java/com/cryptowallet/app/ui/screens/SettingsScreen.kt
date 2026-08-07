@@ -18,7 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Password
@@ -59,9 +64,16 @@ import com.cryptowallet.app.ui.theme.TextSecondary
 @Composable
 fun SettingsScreen(
     account: AccountInfo?,
+    accounts: List<AccountInfo> = emptyList(),
     chains: List<Chain>,
     testnetEnabled: Boolean,
     fiatCurrency: String,
+    biometricEnabled: Boolean = false,
+    biometricAvailable: Boolean = false,
+    onToggleBiometric: (Boolean) -> Unit = {},
+    onAddAccount: () -> Unit = {},
+    onSwitchAccount: (Int) -> Unit = {},
+    onRenameAccount: (Int, String) -> Unit = {_,_ ->},
     onToggleTestnet: (Boolean) -> Unit,
     onSelectCurrency: (String) -> Unit,
     onCopyAddress: (String) -> Unit,
@@ -73,6 +85,8 @@ fun SettingsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var currencyMenu by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<AccountInfo?>(null) }
+    var renameText by remember { mutableStateOf("") }
     val currencyOptions = listOf("USD", "MXN", "EUR", "GBP")
 
     LazyColumn(
@@ -84,7 +98,84 @@ fun SettingsScreen(
             AccountCard(account = account, onCopy = { account?.let { onCopyAddress(it.address) } })
         }
 
+        if (accounts.isNotEmpty()) {
+            item { SectionTitle("Cuentas") }
+            item {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(NavyCard)
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    accounts.forEach { acc ->
+                        val isActive = acc.index == (account?.index ?: 0)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onSwitchAccount(acc.index) }
+                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.size(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    acc.name,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isActive) MaterialTheme.colorScheme.primary else Color.White
+                                )
+                                Text(formatAddress(acc.address), fontSize = 11.sp, color = TextSecondary)
+                            }
+                            if (isActive) {
+                                Icon(Icons.Default.Check, contentDescription = "Activa", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.size(4.dp))
+                            androidx.compose.material3.IconButton(onClick = {
+                                renameTarget = acc
+                                renameText = acc.name
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Renombrar", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onAddAccount() }
+                            .padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Añadir cuenta", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+
         item { SectionTitle("Seguridad") }
+        item {
+            if (biometricAvailable) {
+                SwitchSettingRow(
+                    icon = Icons.Default.Fingerprint,
+                    title = "Desbloqueo con huella",
+                    subtitle = "Abre la billetera con tu huella",
+                    checked = biometricEnabled,
+                    onCheckedChange = onToggleBiometric
+                )
+            }
+        }
         item {
             SettingRow(Icons.Default.Password, "Cambiar PIN", "Actualiza tu PIN de acceso") { onChangePin() }
         }
@@ -196,6 +287,36 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showAbout = false }) { Text("Cerrar") }
+            }
+        )
+    }
+
+    renameTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("Renombrar cuenta") },
+            text = {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(NavyCard)
+                        .padding(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRenameAccount(target.index, renameText)
+                        renameTarget = null
+                    }
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) { Text("Cancelar") }
             }
         )
     }
