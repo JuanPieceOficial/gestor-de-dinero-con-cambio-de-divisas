@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavHostController
 import com.cryptowallet.app.ui.navigation.AppNavigation
 import com.cryptowallet.app.ui.navigation.Routes
 import com.cryptowallet.app.ui.theme.Green
@@ -39,7 +39,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun WalletSection() {
     val app = LocalContext.current.applicationContext as GestorFacilApp
-    val navController = rememberNavController()
+    // NavHostController NO saveable: dentro de AnimatedContent + SaveableStateProvider
+    // el restore de rememberSaveable podía dejar el NavHost desincronizado y el
+    // botón "Crear billetera" no navegaba. Con remember() siempre parte fresco y
+    // consistente (la wallet se bloquea sola al cambiar de pestaña de todos modos).
+    val context = LocalContext.current
+    val navController = remember { NavHostController(context) }
     val scope = rememberCoroutineScope()
 
     var ready by remember { mutableStateOf(false) }

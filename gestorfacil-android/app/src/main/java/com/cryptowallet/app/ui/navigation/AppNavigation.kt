@@ -59,11 +59,22 @@ fun AppNavigation(
     verifyPin: suspend (String) -> Boolean
 ) {
     val app = LocalContext.current.applicationContext as GestorFacilApp
+    val context = LocalContext.current
 
     fun goMain() {
         navController.navigate(Routes.MAIN) {
             popUpTo(Routes.WELCOME) { inclusive = true }
             launchSingleTop = true
+        }
+    }
+
+    // Navegación blindada: si el NavHost no está listo o algo falla, se muestra
+    // un aviso en vez de que el botón "no haga nada" silenciosamente.
+    fun safeNavigate(route: String) {
+        try {
+            navController.navigate(route) { launchSingleTop = true }
+        } catch (e: Exception) {
+            Toast.makeText(context, "No se pudo abrir: ${e.message ?: "error"}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -73,26 +84,26 @@ fun AppNavigation(
     ) {
         composable(Routes.WELCOME) {
             WelcomeScreen(
-                onCreate = { navController.navigate(Routes.CREATE) },
-                onRestore = { navController.navigate(Routes.RESTORE) }
+                onCreate = { safeNavigate(Routes.CREATE) },
+                onRestore = { safeNavigate(Routes.RESTORE) }
             )
         }
         composable(Routes.CREATE) {
             CreateMnemonicScreen(
                 onBack = { navController.popBackStack() },
-                onContinue = { navController.navigate(Routes.VERIFY) }
+                onContinue = { safeNavigate(Routes.VERIFY) }
             )
         }
         composable(Routes.VERIFY) {
             VerifyMnemonicScreen(
                 onBack = { navController.popBackStack() },
-                onVerified = { navController.navigate(Routes.setPin("create")) }
+                onVerified = { safeNavigate(Routes.setPin("create")) }
             )
         }
         composable(Routes.RESTORE) {
             RestoreWalletScreen(
                 onBack = { navController.popBackStack() },
-                onContinue = { navController.navigate(Routes.setPin("restore")) }
+                onContinue = { safeNavigate(Routes.setPin("restore")) }
             )
         }
         composable(
