@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +26,9 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
@@ -70,6 +73,9 @@ fun SettingsScreen(
     settingsManager: SettingsManager,
     repository: FinanceRepository,
     userId: String,
+    isLoggedIn: Boolean = false,
+    userEmail: String? = null,
+    onShowLogin: () -> Unit = {},
     onBack: () -> Unit,
     onSignOut: () -> Unit = {}
 ) {
@@ -368,23 +374,90 @@ fun SettingsScreen(
                 }
             }
 
-            // Logout
-            Button(
-                onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                    contentColor = MaterialTheme.colorScheme.error
-                )
+            // Cuenta y sincronización
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Cerrar sesión", fontWeight = FontWeight.Medium)
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text(
+                        text = "Cuenta y sincronización",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (isLoggedIn) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = userEmail ?: "Sesión iniciada",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Datos sincronizados con la nube",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnMuted
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = onSignOut,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Cerrar sesión", fontWeight = FontWeight.Medium)
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(color = Accent, shape = RoundedCornerShape(50))
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "Modo local — tus datos se guardan en este dispositivo",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnMuted
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = onShowLogin,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Login,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Iniciar sesión para sincronizar", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(32.dp))

@@ -79,31 +79,36 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
 fun MainScreen() {
     val app = LocalContext.current.applicationContext as GestorFacilApp
     val userId by app.authRepository.userId.collectAsState()
+    val isLoggedIn by app.authRepository.isLoggedIn.collectAsState()
+    val userEmail by app.authRepository.email.collectAsState()
     val authLoading by app.authRepository.loading.collectAsState()
 
     if (authLoading) return
     val currentUserId = userId
-    if (currentUserId == null) {
-        LoginScreen(authRepository = app.authRepository)
-        return
-    }
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showSheet by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showLogin by rememberSaveable { mutableStateOf(false) }
     var editingTransaction by rememberSaveable { mutableStateOf<TransactionEntity?>(null) }
     var synced by rememberSaveable { mutableStateOf(false) }
     val stateHolder = rememberSaveableStateHolder()
 
-    // Sync from cloud once on login
-    LaunchedEffect(currentUserId) {
-        if (!synced) {
+    // La app funciona en modo local sin login. Solo se sincroniza con la
+    // nube cuando hay una sesión real de Supabase.
+    LaunchedEffect(currentUserId, isLoggedIn) {
+        if (!synced && isLoggedIn) {
             withContext(Dispatchers.IO) {
                 app.repository.syncFromCloud(currentUserId)
                 app.repository.syncCategoriesFromCloud(currentUserId)
             }
             synced = true
         }
+    }
+
+    // Al cerrar sesión se vuelve al modo local
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) synced = false
     }
 
     val sheetDismiss: () -> Unit = {
@@ -202,6 +207,9 @@ fun MainScreen() {
                     settingsManager = app.settingsManager,
                     repository = app.repository,
                     userId = currentUserId,
+                    isLoggedIn = isLoggedIn,
+                    userEmail = userEmail,
+                    onShowLogin = { showLogin = true },
                     onBack = { showSettings = false },
                     onSignOut = {
                         CoroutineScope(Dispatchers.IO).launch {
@@ -252,5 +260,18 @@ fun MainScreen() {
             },
             editTransaction = editingTransaction
         )
+    }
+
+    // Login opcional (overlay con fondo opaco) para sincronizar con Supabase
+    if (showLogin && !isLoggedIn) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            LoginScreen(
+                authRepository = app.authRepository,
+                onSkip = { showLogin = false }
+            )
+        }
     }
 }

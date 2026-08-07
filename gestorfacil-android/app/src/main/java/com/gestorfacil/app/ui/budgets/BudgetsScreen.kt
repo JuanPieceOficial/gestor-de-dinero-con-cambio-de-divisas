@@ -41,14 +41,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun BudgetsScreen(repository: FinanceRepository, currency: Currency = Currency.EUR) {
+fun BudgetsScreen(repository: FinanceRepository, currency: Currency = Currency.EUR, userId: String = "") {
     val budgets by repository.allBudgets.collectAsState(initial = emptyList())
     val spentMap = remember { mutableStateMapOf<String, Double>() }
 
-    LaunchedEffect(budgets) {
+    LaunchedEffect(budgets, userId) {
         budgets.forEach { budget ->
             val spent = withContext(Dispatchers.IO) {
-                repository.getSpentByCategory(budget.category)
+                repository.getSpentByCategory(budget.category, userId)
             }
             spentMap[budget.category] = spent
         }

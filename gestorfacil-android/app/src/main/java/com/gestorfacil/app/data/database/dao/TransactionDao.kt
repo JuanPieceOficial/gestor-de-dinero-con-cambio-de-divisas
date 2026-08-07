@@ -56,6 +56,6 @@ interface TransactionDao {
     @Query("SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE type = 'expense' AND userId = :userId")
     fun totalExpenseByUserFlow(userId: String): Flow<Double>
 
-    @Query("SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE type = 'expense' AND category = :category")
-    suspend fun totalSpentByCategory(category: String): Double
+    @Query("SELECT COALESCE(SUM(ABS(amount)), 0) FROM transactions WHERE type = 'expense' AND category = :category AND userId = :userId")
+    suspend fun totalSpentByCategory(category: String, userId: String): Double
 }

@@ -39,7 +39,10 @@ import com.gestorfacil.app.ui.theme.Primary
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(authRepository: AuthRepository) {
+fun LoginScreen(
+    authRepository: AuthRepository,
+    onSkip: () -> Unit = {}
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLogin by remember { mutableStateOf(true) }
@@ -164,6 +167,15 @@ fun LoginScreen(authRepository: AuthRepository) {
                 text = if (isLogin) "\u00bfNo tienes cuenta? Reg\u00edstrate"
                     else "\u00bfYa tienes cuenta? Inicia sesi\u00f3n",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onSkip) {
+            Text(
+                text = "Continuar sin cuenta (modo local)",
+                color = Primary.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium
             )
         }
     }

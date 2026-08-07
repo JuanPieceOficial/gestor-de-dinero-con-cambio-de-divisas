@@ -205,8 +205,8 @@ class FinanceRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun getSpentByCategory(category: String): Double =
-        transactionDao.totalSpentByCategory(category)
+    suspend fun getSpentByCategory(category: String, userId: String): Double =
+        transactionDao.totalSpentByCategory(category, userId)
 
     suspend fun updateBudget(category: String, limit: Double) =
         budgetDao.updateLimit(category, limit)
