@@ -144,7 +144,7 @@ export async function unlockWallet(pin: string): Promise<string | null> {
   }
 }
 
-export async function revealPhrase(pin: string): Promise<string | null> {
+async function decryptPhrase(pin: string): Promise<string | null> {
   const stored = getStored();
   if (!stored) return null;
   try {
@@ -156,7 +156,51 @@ export async function revealPhrase(pin: string): Promise<string | null> {
     );
     return new TextDecoder().decode(pt);
   } catch {
+    return null; // PIN incorrecto
+  }
+}
+
+export async function revealPhrase(pin: string): Promise<string | null> {
+  return decryptPhrase(pin);
+}
+
+// Clave privada en memoria para firmar transacciones (solo durante la sesión desbloqueada)
+export async function getPrivateKey(pin: string): Promise<string | null> {
+  const phrase = await decryptPhrase(pin);
+  if (!phrase) return null;
+  try {
+    return ethers.Wallet.fromPhrase(phrase).privateKey;
+  } catch {
     return null;
+  }
+}
+
+export async function changePin(oldPin: string, newPin: string): Promise<boolean> {
+  const phrase = await decryptPhrase(oldPin);
+  if (!phrase) return false;
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(newPin, salt);
+    const ct = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      new TextEncoder().encode(phrase)
+    );
+    const stored = getStored();
+    if (!stored) return false;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...stored,
+        salt: toHex(salt),
+        iv: toHex(iv),
+        ciphertext: toHex(ct),
+      })
+    );
+    return true;
+  } catch {
+    return false;
   }
 }
 

@@ -303,7 +303,7 @@ export function formatCryptoAmount(value: number, maxDecimals = 6): string {
   return value.toLocaleString("es-ES", { maximumFractionDigits: maxDecimals });
 }
 
-export function shortAddress(addr: string): string {
+export function shortAddress(addr: string, tail = 6): string {
   if (addr.length < 12) return addr;
-  return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
+  return `${addr.slice(0, 8)}…${addr.slice(-tail)}`;
 }
